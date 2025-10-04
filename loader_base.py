@@ -9,13 +9,20 @@ import pandas as pd
 
 
 class DataLoaderBase(object):
-    #add PATH as new parameter, which is used to parallelize the experiments. 
+
+    """
+    Base data loader class for collaborative filtering and knowledge graph data.
+    Used by higher-level loaders such as DataLoaderKGHRec.
+    """
+    
     def __init__(self, args, logging):
+        """
+        Initialize data paths, load datasets, and prepare statistics.
+        """
         self.args = args
         self.data_name = args.data_name
         self.use_pretrain = args.use_pretrain
         self.pretrain_embedding_dir = args.pretrain_embedding_dir
-        #load dataset files according to given folde name, by default, args.data_dir is "datasets" in the root Python folder
         self.data_dir = os.path.join(args.data_dir, args.data_name, args.path)
         self.train_file = os.path.join(self.data_dir, 'train.txt')
         self.test_file = os.path.join(self.data_dir, 'test.txt')
@@ -36,8 +43,15 @@ class DataLoaderBase(object):
         if self.use_pretrain == 1:
             self.load_pretrained_data()
 
+    # -----------------------------------------------------------
+    #  Collaborative Filtering (CF) Data
+    # -----------------------------------------------------------
+
 
     def load_cf(self, filename):
+        """
+        Load collaborative filtering (user-item/project-library) data from file.
+        """
         user = []
         item = []
         user_dict = dict()
@@ -62,6 +76,10 @@ class DataLoaderBase(object):
 
 
     def statistic_cf(self):
+        """
+        Compute and log dataset statistics for users/projects and items/libraries.
+        """
+
         #max(self.cf_train_data[0]) is the maximum ID of current projects/users
         #here, max(self.cf_train_data[0])-min(self.cf_train_data[0]) is the real user/project amount, as the user/project IDs do not start from 0 (offset applied).
         print(" - - - - - test - - - - - -")
@@ -82,16 +100,26 @@ class DataLoaderBase(object):
         
         self.n_cf_train = len(self.cf_train_data[0])
         self.n_cf_test = len(self.cf_test_data[0])
-
+        
+    # -----------------------------------------------------------
+    #  Knowledge Graph (KG) Data
+    # -----------------------------------------------------------
 
     def load_kg(self, filename):
-        # h, r, t stand for user/item,relation type,another user/item, respectively.
+
+        """
+        Load knowledge graph data of (head, relation, tail) triples.
+        """
         kg_data = pd.read_csv(filename, sep=' ', names=['h', 'r', 't'], engine='python')
         kg_data = kg_data.drop_duplicates()
         return kg_data
 
 
     def sample_pos_items_for_u(self, user_dict, user_id, n_sample_pos_items):
+        """
+        Sample positive items for a given user.
+        """
+
         pos_items = user_dict[user_id]
         n_pos_items = len(pos_items)
 
@@ -108,6 +136,9 @@ class DataLoaderBase(object):
 
 
     def sample_neg_items_for_u(self, user_dict, user_id, n_sample_neg_items):
+        """
+        Sample negative items (not interacted) for a given user.
+        """
         pos_items = user_dict[user_id]
 
         sample_neg_items = []
@@ -122,6 +153,11 @@ class DataLoaderBase(object):
 
 
     def generate_cf_batch(self, user_dict, batch_size):
+        """
+        Generate a mini-batch for CF training.
+        Returns (user, positive_item, negative_item).
+        """
+
         exist_users = user_dict.keys()
         if batch_size <= len(exist_users):
             #batch_user = random.sample(exist_users, batch_size)
@@ -145,6 +181,9 @@ class DataLoaderBase(object):
 
 
     def sample_pos_triples_for_h(self, kg_dict, head, n_sample_pos_triples):
+        """
+        Sample positive (relation, tail) pairs for a given head entity.
+        """
         pos_triples = kg_dict[head]
         n_pos_triples = len(pos_triples)
 
@@ -164,6 +203,9 @@ class DataLoaderBase(object):
 
 
     def sample_neg_triples_for_h(self, kg_dict, head, relation, n_sample_neg_triples, highest_neg_idx):
+        """
+        Sample negative tail entities for a given (head, relation) pair.
+        """
         pos_triples = kg_dict[head]
 
         sample_neg_tails = []
@@ -178,6 +220,10 @@ class DataLoaderBase(object):
 
 
     def generate_kg_batch(self, kg_dict, batch_size, highest_neg_idx):
+        """
+        Generate a mini-batch for KG training.
+        Returns (head, relation, pos_tail, neg_tail).
+        """
         exist_heads = kg_dict.keys()
         if batch_size <= len(exist_heads):
             #batch_head = random.sample(exist_heads, batch_size)
@@ -205,17 +251,22 @@ class DataLoaderBase(object):
         batch_neg_tail = torch.LongTensor(batch_neg_tail)
         return batch_head, batch_relation, batch_pos_tail, batch_neg_tail
 
+    # -----------------------------------------------------------
+    #  Pretrained Embeddings
+    # -----------------------------------------------------------
 
     def load_pretrained_data(self):
+        """
+        Load pretrained user/item embeddings for initialization.
+        """
         pre_model = 'mf'
         pretrain_path = '%s/%s/%s.npz' % (self.pretrain_embedding_dir, self.data_name, pre_model)
         pretrain_data = np.load(pretrain_path)
         self.user_pre_embed = pretrain_data['user_embed']
         self.item_pre_embed = pretrain_data['item_embed']
 
-        assert self.user_pre_embed.shape[0] == self.n_users
-        assert self.item_pre_embed.shape[0] == self.n_items
-        assert self.user_pre_embed.shape[1] == self.args.embed_dim
-        assert self.item_pre_embed.shape[1] == self.args.embed_dim
-
+        assert self.user_pre_embed.shape[0] == self.n_users, "User embedding shape mismatch"
+        assert self.item_pre_embed.shape[0] == self.n_items, "Item embedding shape mismatch"
+        assert self.user_pre_embed.shape[1] == self.args.embed_dim, "User embedding dim mismatch"
+        assert self.item_pre_embed.shape[1] == self.args.embed_dim, "Item embedding dim mismatch"
 
