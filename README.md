@@ -1,35 +1,42 @@
 # KGHRec
-Source code for KHGRec TPL recommendation system.
 
-## Environment Requirement
+**KGHRec**, a knowledge graph–based hypergraph neural network for project–library recommendation.  
+---
 
-The code has been tested running under Python 3.7.5. 
+## Overview
 
-The required packages are as follows. However, later versions are acceptable.
+KGHRec combines:
+- **Collaborative filtering (CF)** based on project–library interactions, and  
+- **Knowledge Graph (KG)** reasoning over library dependencies and project metadata,  
+enhanced via a **hypergraph neural network** for higher-order relation modeling.
 
-CUDA == 10.2
+---
 
-torch == 1.11.0
+## Environment Requirements
 
-numpy == 1.21.5
+The model has been tested under **Python 3.7.5**, but newer versions are also compatible.
 
-pandas == 1.3.5
+| Dependency | Version (tested) |
+|-------------|------------------|
+| CUDA | 10.2 |
+| PyTorch | 1.11.0 |
+| NumPy | 1.21.5 |
+| Pandas | 1.3.5 |
+| SciPy | 1.4.1 |
+| tqdm | 4.64.0 |
+| scikit-learn | 0.22 |
 
-scipy == 1.4.1
+To install all dependencies:
+```bash
+pip install torch==1.11.0 numpy==1.21.5 pandas==1.3.5 scipy==1.4.1 tqdm==4.64.0 scikit-learn==0.22
 
-tqdm == 4.64.0
-
-scikit-learn == 0.22
 
 ## Run the Codes
 
+You can run the model with the following command:
+
 python main.py --data_name PyLib/ --path t06/ --use_pretrain 0 --attention 1 --knowledgegraph 1
 
-parameter --path defines the subfolder name of the used dataset in the PyLib folder, which contains both the training set (named train.txt) and test set (named test.txt). Note that IDs are separated by "ONE SPACE" rather than "ONE TAB".
-
-parameters "--attention" and "--knowledgegraph" define whether to use such functionalities (1) or not (0)
-
-Currently, the dataset is split by 40%, i.e., 40% of TPLs are used as the test set while the left 60% of TPLs are used as the train set.
 
 ## Results 
 
