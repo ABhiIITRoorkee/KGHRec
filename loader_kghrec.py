@@ -10,7 +10,12 @@ import scipy.sparse as sp
 from loader_base import DataLoaderBase
 
 
-class DataLoaderPYREC(DataLoaderBase):
+class DataLoaderKGHRec(DataLoaderBase):
+
+    """
+    Data loader for the KGHRec model — extends the base loader with
+    knowledge graph and hypergraph construction utilities.
+    """
 
     def __init__(self, args, logging):
         super().__init__(args, logging)
@@ -18,15 +23,23 @@ class DataLoaderPYREC(DataLoaderBase):
         self.kg_batch_size = args.kg_batch_size
         self.test_batch_size = args.test_batch_size
 
-        
-        
-        #this is used to load the KG files, it uses knowledge graph in the model if parameter self.knowledgegraph is 1
+        # ----------------------------
+        # Load Knowledge Graph
+        # ----------------------------
         if self.knowledgegraph:
             kg_data = self.load_kg(self.kg_file)
             kg_data.to_csv('kg_data.csv', index=False)
+            self.h_list = torch.LongTensor(kg_data['h'].values)
+            self.r_list = torch.LongTensor(kg_data['r'].values)
+            self.t_list = torch.LongTensor(kg_data['t'].values)
 
         else:
             kg_data = self.load_kg(self.kg_empty) #do not use any KG information (context information)
+
+
+        # ----------------------------
+        # Construct dataset structures
+        # ----------------------------
             
         self.construct_data(kg_data)
         self.print_info(logging)
@@ -36,6 +49,10 @@ class DataLoaderPYREC(DataLoaderBase):
         self.create_laplacian_dict()
         self.check_kg_sparsity()
         self.incidence_matrix = self.create_incidence_matrix()
+
+    # -----------------------------------------------------------
+    #  Hypergraph Construction
+    # -----------------------------------------------------------
 
     def create_incidence_matrix(self):
         """
@@ -96,7 +113,14 @@ class DataLoaderPYREC(DataLoaderBase):
         adj_matrix_df.to_csv('adj_matrix_pyrec.csv', index=False)
 
 
+    # -----------------------------------------------------------
+    #  KG and CF Integration
+    # -----------------------------------------------------------
+
     def construct_data(self, kg_data):
+        
+        """Clean and prepare KG and CF data, then merge into a unified structure."""
+
         print("kg_data columns: ", kg_data.columns)
         print("First few rows of kg_data:")
         print(kg_data.head())
@@ -196,8 +220,13 @@ class DataLoaderPYREC(DataLoaderBase):
         h_r_t_data = pd.DataFrame({'h': self.h_list.numpy(), 'r': self.r_list.numpy(), 't': self.t_list.numpy()})
         h_r_t_data.to_csv('h_r_t_data.csv', index=False)
 
+    # -----------------------------------------------------------
+    #  Sparse Utilities
+    # -----------------------------------------------------------
 
     def convert_coo2tensor(self, coo):
+        
+        """Convert scipy COO matrix to torch sparse tensor."""
         values = coo.data
         indices = np.vstack((coo.row, coo.col))
 
@@ -208,7 +237,15 @@ class DataLoaderPYREC(DataLoaderBase):
 
 
     ##this is a two-dimension matrix, line is head and column is rear, value is the corresponding KG relation.
+
+    # -----------------------------------------------------------
+    #  Graph Structures
+    # -----------------------------------------------------------
+    
     def create_adjacency_dict(self):
+
+        """Create adjacency matrices for each relation type."""
+
         self.adjacency_dict = {}
         for r, ht_list in self.train_relation_dict.items():
             rows = [e[0] for e in ht_list]
@@ -230,6 +267,9 @@ class DataLoaderPYREC(DataLoaderBase):
 
 
     def create_laplacian_dict(self):
+
+        """Create Laplacian matrices (normalized adjacency) for each relation."""
+
         def symmetric_norm_lap(adj):
             print("---- initialize the laplacian matrix by symmetric ----")
             rowsum = np.array(adj.sum(axis=1, dtype=np.float32))
@@ -272,6 +312,9 @@ class DataLoaderPYREC(DataLoaderBase):
         A_in = sum(self.laplacian_dict.values())
         self.A_in = self.convert_coo2tensor(A_in.tocoo())
 
+    # -----------------------------------------------------------
+    #  Logging
+    # -----------------------------------------------------------
 
     def print_info(self, logging):
         logging.info(' ---------- summary -----------')
