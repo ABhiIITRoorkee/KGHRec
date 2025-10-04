@@ -1,7 +1,7 @@
 import argparse
 
 
-def parse_pyrec_args():
+def parse_kghrec_args():
     parser = argparse.ArgumentParser(description="Run KGAT.")
 
     parser.add_argument('--seed', type=int, default=4022,
@@ -102,6 +102,17 @@ def parse_pyrec_args():
     ###################################################################  
     parser.add_argument('--Ks', nargs='?', default='[5, 10,15,20]',
                         help='Calculate metric@K when evaluating.')
+
+
+    
+
+    parser.add_argument('--lambda_p', type=float, default=0.5, help='Semantic weight for project similarity')
+    parser.add_argument('--lambda_l', type=float, default=0.5, help='Semantic weight for library similarity')
+    parser.add_argument('--alpha_p', type=float, default=0.5, help='Threshold for project similarity')
+    parser.add_argument('--alpha_l', type=float, default=0.5, help='Threshold for library similarity')
+
+
+
 
     args = parser.parse_args()
 
